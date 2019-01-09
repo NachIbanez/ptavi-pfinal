@@ -7,6 +7,7 @@ Clase (y programa principal) para un servidor de eco en UDP simple
 import socketserver
 import sys
 import os
+from xml.sax import make_parser
 from xml.sax.handler import ContentHandler
 
 class XML_Data_Handler(ContentHandler):
@@ -27,6 +28,18 @@ class XML_Data_Handler(ContentHandler):
             self.attr_dicc['UA_Name'] = username
             self.attr_dicc['UA_Password'] = passwd
 
+        if name == 'server':
+            name = attrs.get('name', "")
+            port = attrs.get('port', "")
+            self.attr_dicc['Server_Name'] = name
+            self.attr_dicc['Server_Port'] = port
+
+        if name == 'database':
+            path = attrs.get('path', "")
+            passwd_path = attrs.get('passwd_path', "")
+            self.attr_dicc['Database_Path'] = path
+            self.attr_dicc['Passwords_Path'] = passwd_path
+
         if name == 'uaserver':
             puerto = attrs.get('puerto', "")
             self.attr_dicc['Server_Port'] = puerto
@@ -43,7 +56,7 @@ class XML_Data_Handler(ContentHandler):
 
         if name == 'log':
             path = attrs.get('path', "")
-            self.attr_dicc['ualog_Path'] = path
+            self.attr_dicc['log_Path'] = path
 
         if name == 'audio':
             path = attrs.get('path', "")
@@ -98,11 +111,28 @@ class EchoHandler(socketserver.DatagramRequestHandler):
 if __name__ == "__main__":
     # Creamos servidor de eco y escuchamos
     try:
-        IP = sys.argv[1]
-        PORT = sys.argv[2]
-        AUDIO = sys.argv[3]
+        config = sys.argv[1]
     except Index_Error:
-        sys.exit("Usage: python3 server.py IP port audio_file")
+        sys.exit("Usage: python3 uaserver.py config")
+
+    # Creamos el parser para manejar el fichero xml y recoger los datos del UA
+
+    parser = make_parser()
+    Data_Handler = XML_Data_Handler()
+    parser.setContentHandler(Data_Handler)
+    parser.parse(open(config))
+    diccionario_datos = Data_Handler.dicc_atributos()
+
+    # Pasamos los datos relevantes del XML a variables del programa 
+
+    UA_Name = diccionario_datos["UA_Name"]
+    UA_Password = diccionario_datos["UA_Password"]
+    Server_Port = diccionario_datos["Server_Port"]
+    RTP_Port = diccionario_datos["RTP_Port"]
+    Proxy_IP = diccionario_datos["proxy_IP"]
+    Proxy_Port = diccionario_datos["proxy_Port"]
+    Log_Path = diccionario_datos["log_Path"]
+    audio_path = diccionario_datos["audio_Path"]
 
     serv = socketserver.UDPServer(('', 6001), EchoHandler)
     print("Listening")
