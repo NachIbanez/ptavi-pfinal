@@ -5,6 +5,7 @@ Clase (y programa principal) para un servidor de eco en UDP simple
 """
 
 import socketserver
+import socket
 import sys
 import os
 from xml.sax import make_parser
@@ -81,6 +82,7 @@ class EchoHandler(socketserver.DatagramRequestHandler):
             line = self.rfile.read()
             line = line.decode('utf-8')
             method = line[:line.find(" ")]
+            print("---" + line)
             if method == "INVITE":
                 print("El cliente nos manda " + line)
                 if "@" not in line or ":" not in line:
@@ -91,8 +93,8 @@ class EchoHandler(socketserver.DatagramRequestHandler):
                                      b'SIP/2.0 200 OK\r\n\r\n')
             elif method == "ACK":
                 print("El cliente nos manda " + line)
-                aEjecutar = './mp32rtp -i 127.0.0.1 -p 23032 < ' + AUDIO
-                os.system(aEjecutar)
+                aEjecutar = './mp32rtp -i 127.0.0.1 -p 5003 < ' + "cancion.mp3"
+                #os.system(aEjecutar)
             elif line[:line.find(" ")] == "BYE":
                 print("El cliente nos manda " + line)
                 if "@" not in line or ":" not in line:
@@ -134,6 +136,6 @@ if __name__ == "__main__":
     Log_Path = diccionario_datos["log_Path"]
     audio_path = diccionario_datos["audio_Path"]
 
-    serv = socketserver.UDPServer(('', 6001), EchoHandler)
+    serv = socketserver.UDPServer(('', int(Server_Port)), EchoHandler)
     print("Listening")
     serv.serve_forever()

@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import socketserver
+import socket
 import sys
 import time
 import json
@@ -51,7 +52,7 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
         lo elimina del diccionario
         """
         self.json2registered()
-        line_decoded = "-->"
+        line_decoded = ""
         for line in self.rfile:
             line_decoded += line.decode('utf-8')
         if "REGISTER" in line_decoded and "Authorizathion:" in line_decoded:
@@ -84,9 +85,34 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
         elif "REGISTER" in line_decoded:
             self.wfile.write(b'SIP/2.0 401 Unauthorized\r\nWWW Authenticate: Digest nonce="987987987987987987"')
         elif "INVITE" in line_decoded:
-            pass
-        print(line_decoded)
-
+            username = line_decoded[line_decoded.find(":")+1:line_decoded.find("@")]
+            print("-------" + username)           
+            if username == "paquito" or username == "juanito":
+                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
+                    my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    my_socket.connect(("", int("6003")))
+                    my_socket.send(bytes(line_decoded, 'utf-8'))
+                    data = my_socket.recv(1024)
+                    message = data.decode('utf-8')
+                    lista = (message.split())
+                    if lista == ['SIP/2.0', '100', 'Trying', 'SIP/2.0', '180',
+                                 'Ringing', 'SIP/2.0', '200', 'OK']:
+                        self.wfile.write(bytes(message, "utf-8"))
+            else:
+                self.wfile.write(b'SIP/2.0 404 User Not Found\r\n')               
+        elif "ACK" in line_decoded:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
+                my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                my_socket.connect(("", int("6003")))
+                my_socket.send(bytes(line_decoded, 'utf-8'))
+        elif "BYE" in line_decoded:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
+                my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                my_socket.connect(("", int("6003")))
+                my_socket.send(bytes(line_decoded, 'utf-8'))
+                data = my_socket.recv(1024)
+                message = data.decode('utf-8')
+                self.wfile.write(bytes(message, "utf-8"))
 if __name__ == "__main__":
     try:
         config = sys.argv[1]

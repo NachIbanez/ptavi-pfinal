@@ -76,10 +76,10 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
 
     if str.upper(method) == "REGISTER" :
 
-        LINE = str.upper(method) + " sip:" + UA_Name + ":" + Server_Port + \
-               " SIP/2.0 \r\n\r\n" + "Expires: " + option
-        LINE_log = str.upper(method) + " sip:" + UA_Name + ":" + Server_Port + \
-               ": SIP/2.0 " + "Expires: " + option
+        LINE = str.upper(method) + " sip:" + UA_Name + "127.0.0.1" + \
+               " SIP/2.0\r\n\r\n" + "Expires: " + option
+        LINE_log = str.upper(method) + " sip:" + UA_Name + "127.0.0.1" + \
+               " SIP/2.0" + "Expires: " + option
         log(Log_Path, "send", Proxy_IP, Proxy_Port, LINE_log)
         my_socket.send(bytes(LINE, 'utf-8'))
         data = my_socket.recv(1024)
@@ -94,7 +94,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
         elif lista[1] == "401":
             log(Log_Path, "error", Proxy_IP, Proxy_Port, message[:message.find("WWW")-2])
             LINE = str.upper(method) + " sip:" + UA_Name + ":" + Server_Port + \
-                   " SIP/2.0 \r\n" + "Expires: " + option + "\r\n" + \
+                   " SIP/2.0\r\n\r\n" + "Expires: " + option + "\r\n" + \
                    "Authorizathion: Digest response= " + UA_Password
             LINE_log = str.upper(method) + " sip:" + UA_Name + ":" + Server_Port + \
                    " SIP/2.0 " + "Expires: " + option + \
@@ -109,19 +109,39 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
 
     if str.upper(method) == "INVITE" :
 
-        LINE = str.upper(method) + " sip:" + UA_Name + ":" + Server_Port + \
-               " SIP/2.0 \r\n\r\n" + "Expires: " + option
-        LINE_log = str.upper(method) + " sip:" + UA_Name + ":" + Server_Port + \
-               ": SIP/2.0 " + "Expires: " + option
+        LINE = str.upper(method) + " sip:" + option + "@127.0.0.1"+ \
+               " SIP/2.0\r\n\r\n" + "Content-Type: application/sdp" \
+               + "\r\n\r\n" + "v=0\n" \
+               + "o=" + UA_Name + " 127.0.0.1\n" + "s=sesion-rtp\n" \
+               + "t=0\n" + "m=audio 34543 RTP\r\n"
+        print(LINE)
+                 
+        LINE_log = str.upper(method) + " sip:" + option + ": SIP/2.0 " + \
+                   "Content-Type: application/sdp" + " " + "v=0 " \
+                   + "o=" + UA_Name + " 127.0.0.1 " + "s=sesion-rtp " \
+                   + "t=0 " + "m=audio 34543 RTP"
+
         log(Log_Path, "send", Proxy_IP, Proxy_Port, LINE_log)
         my_socket.send(bytes(LINE, 'utf-8'))
         data = my_socket.recv(1024)
         message = data.decode('utf-8')
+        print(message)
         lista = (message.split())
         if lista == ['SIP/2.0', '100', 'Trying', 'SIP/2.0', '180',
                      'Ringing', 'SIP/2.0', '200', 'OK']:
-            LINE = ("ACK sip:" + sys.argv[2][:sys.argv[2].rfind(":")] + " SIP/2.0")
-            print("Enviando: " + LINE)
+            LINE = ("ACK sip:juanito SIP/2.0")
+            log(Log_Path, "send", Proxy_IP, Proxy_Port, LINE)
             my_socket.send(bytes(LINE, 'utf-8') + b'\r\n\r\n')
             data = my_socket.recv(1024)
+
+    if str.upper(method) == "BYE" :
+
+        LINE = str.upper(method) + " sip:" + option + "@127.0.0.1" + \
+               " SIP/2.0\r\n\r\n"                  
+        LINE_log = str.upper(method) + " sip:" + option + ": SIP/2.0 "
+        log(Log_Path, "send", Proxy_IP, Proxy_Port, LINE_log)
+        my_socket.send(bytes(LINE, 'utf-8'))
+        data = my_socket.recv(1024)
+        message = data.decode('utf-8')
+        log(Log_Path, "receive", Proxy_IP, Proxy_Port, message)
 
