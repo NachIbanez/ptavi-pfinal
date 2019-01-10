@@ -11,8 +11,29 @@ import time
 from xml.sax import make_parser
 from xml.sax.handler import ContentHandler
 
-# Cliente UDP simple.
 
+#Tiempo actual en el formato requerido para dicha práctica
+def time_now():
+    gmt_actual = (time.strftime('%Y%m%d%H%M%S',
+                  time.gmtime(time.time())))
+    return gmt_actual
+
+#Funcion que se hará cargo de los mensajes log que se imprimirán en pantalla
+# y que se introduciran en nuestro fichero txt de log 
+
+def log(log_file, option, ip, port, text):
+    log_msg = ""
+    if option == "send":
+        log_msg = "Sent to " + str(ip) + ":" + str(port) + " " + text + "\n"
+    elif option == "receive":
+        log_msg = "Received from " + str(ip) + ":" + str(port) + " " + text \
+                  + "\n"
+    elif option == "error":
+        log_msg = "Error: " + text + "\n"
+    print(time_now() + " " + log_msg)
+    log_txt = open(log_file, "a")
+    log_txt.write(time_now() + " " + log_msg)
+    log_txt.close()
 try:
     config = sys.argv[1]
     method = sys.argv[2]
@@ -37,31 +58,7 @@ RTP_Port = diccionario_datos["RTP_Port"]
 Proxy_IP = diccionario_datos["proxy_IP"]
 Proxy_Port = diccionario_datos["proxy_Port"]
 Log_Path = diccionario_datos["log_Path"]
-audio_path = diccionario_datos["audio_Path"]
-#Tiempo actual en el formato requerido para dicha práctica
-
-def time_now():
-    gmt_actual = (time.strftime('%Y%m%d%H%M%S',
-                  time.gmtime(time.time())))
-    return gmt_actual
-
-#Funcion que se hará cargo de los mensajes log que se imprimirán en pantalla
-# y que se introduciran en nuestro fichero txt de log 
-
-def log(log_file, option, ip, port, text):
-    log_msg = ""
-    if option == "send":
-        log_msg = "Sent to " + str(ip) + ":" + str(port) + " " + text + "\n"
-    elif option == "receive":
-        log_msg = "Received from " + str(ip) + ":" + str(port) + " " + text \
-                  + "\n"
-    elif option == "error":
-        log_msg = "Error: " + text + "\n"
-    print(time_now() + " " + log_msg)
-    log_txt = open(log_file, "a")
-    log_txt.write(time_now() + " " + log_msg)
-    log_txt.close()
-        
+audio_path = diccionario_datos["audio_Path"] 
 
 # Creamos el socket, lo configuramos y lo atamos a un servidor/puerto
 
@@ -84,14 +81,9 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
         my_socket.send(bytes(LINE, 'utf-8'))
         data = my_socket.recv(1024)
         message = data.decode('utf-8')
+        log(Log_Path, "receive", Proxy_IP, Proxy_Port, message)
         lista = (message.split())
-        if lista == ['SIP/2.0', '100', 'Trying', 'SIP/2.0', '180',
-                     'Ringing', 'SIP/2.0', '200', 'OK']:
-            LINE = ("ACK sip:" + sys.argv[2][:sys.argv[2].rfind(":")] + " SIP/2.0")
-            print("Enviando: " + LINE)
-            my_socket.send(bytes(LINE, 'utf-8') + b'\r\n\r\n')
-            data = my_socket.recv(1024)
-        elif lista[1] == "401":
+        if lista[1] == "401":
             log(Log_Path, "error", Proxy_IP, Proxy_Port, message[:message.find("WWW")-2])
             LINE = str.upper(method) + " sip:" + UA_Name + ":" + Server_Port + \
                    " SIP/2.0\r\n\r\n" + "Expires: " + option + "\r\n" + \
@@ -114,18 +106,15 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
                + "\r\n\r\n" + "v=0\n" \
                + "o=" + UA_Name + " 127.0.0.1\n" + "s=sesion-rtp\n" \
                + "t=0\n" + "m=audio 34543 RTP\r\n"
-        print(LINE)
-                 
         LINE_log = str.upper(method) + " sip:" + option + ": SIP/2.0 " + \
                    "Content-Type: application/sdp" + " " + "v=0 " \
                    + "o=" + UA_Name + " 127.0.0.1 " + "s=sesion-rtp " \
                    + "t=0 " + "m=audio 34543 RTP"
-
         log(Log_Path, "send", Proxy_IP, Proxy_Port, LINE_log)
         my_socket.send(bytes(LINE, 'utf-8'))
         data = my_socket.recv(1024)
         message = data.decode('utf-8')
-        print(message)
+        log(Log_Path, "receive", Proxy_IP, Proxy_Port, " ".join(message.split()))
         lista = (message.split())
         if lista == ['SIP/2.0', '100', 'Trying', 'SIP/2.0', '180',
                      'Ringing', 'SIP/2.0', '200', 'OK']:

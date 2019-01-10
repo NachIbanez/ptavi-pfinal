@@ -8,8 +8,33 @@ import socketserver
 import socket
 import sys
 import os
+import time
 from xml.sax import make_parser
 from xml.sax.handler import ContentHandler
+
+
+#Tiempo actual en el formato requerido para dicha práctica
+def time_now():
+    gmt_actual = (time.strftime('%Y%m%d%H%M%S',
+                  time.gmtime(time.time())))
+    return gmt_actual
+
+#Funcion que se hará cargo de los mensajes log que se imprimirán en pantalla
+# y que se introduciran en nuestro fichero txt de log 
+
+def log(log_file, option, ip, port, text):
+    log_msg = ""
+    if option == "send":
+        log_msg = "Sent to " + str(ip) + ":" + str(port) + " " + text + "\n"
+    elif option == "receive":
+        log_msg = "Received from " + str(ip) + ":" + str(port) + " " + text \
+                  + "\n"
+    elif option == "error":
+        log_msg = "Error: " + text + "\n"
+    print(time_now() + " " + log_msg)
+    log_txt = open(log_file, "a")
+    log_txt.write(time_now() + " " + log_msg)
+    log_txt.close()
 
 class XML_Data_Handler(ContentHandler):
     """
@@ -81,25 +106,35 @@ class EchoHandler(socketserver.DatagramRequestHandler):
             # Se harán diferentes acciones según llegue invite, ack o bye
             line = self.rfile.read()
             line = line.decode('utf-8')
+            log("ua2log.txt", "receive", "127.0.0.1", 
+                int("5005"), " ".join(line.split()))
             method = line[:line.find(" ")]
-            print("---" + line)
             if method == "INVITE":
                 print("El cliente nos manda " + line)
                 if "@" not in line or ":" not in line:
+                    Error = "SIP/2.0 400 Bad Request"
+                    log("prlog.txt", "send", "127.0.0.1", 
+                        int("5005"), Error)
                     self.wfile.write(b'SIP/2.0 400 Bad Request')
                 else:
+                    msg = 'SIP/2.0 100 Trying' + 'SIP/2.0 180 Ringing' + 'SIP/2.0 200 OK'      
+                    log("prlog.txt", "send", "127.0.0.1", 
+                        int("5005"), msg)
                     self.wfile.write(b'SIP/2.0 100 Trying\r\n\r\n'
                                      b'SIP/2.0 180 Ringing\r\n\r\n'
                                      b'SIP/2.0 200 OK\r\n\r\n')
             elif method == "ACK":
-                print("El cliente nos manda " + line)
                 aEjecutar = './mp32rtp -i 127.0.0.1 -p 5003 < ' + "cancion.mp3"
                 #os.system(aEjecutar)
             elif line[:line.find(" ")] == "BYE":
-                print("El cliente nos manda " + line)
                 if "@" not in line or ":" not in line:
+                    Error = "SIP/2.0 400 Bad Request"
+                    log("prlog.txt", "send", "127.0.0.1", 
+                        int("5005"), Error)
                     self.wfile.write(b'SIP/2.0 400 Bad Request\r\n\r\n')
                 else:
+                    log("prlog.txt", "send", "127.0.0.1", 
+                        int("5005"), 'SIP/2.0 200 OK')
                     self.wfile.write(b'SIP/2.0 200 OK\r\n')
             elif line and method != "INVITE" and method != "BYE"\
                     and method != "ACK":

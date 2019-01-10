@@ -17,7 +17,7 @@
     <!ATTLIST audio path CDATA #REQUIRED>
 ]>
 <config>
-    <account username="paquito" password="lobo" />
+    <account username="paquito@" password="lobo" />
     <uaserver puerto="5003" />
     <rtpaudio puerto="5004" />
     <regproxy ip="127.0.0.1" puerto="5005" />
