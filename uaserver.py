@@ -13,14 +13,15 @@ from xml.sax import make_parser
 from xml.sax.handler import ContentHandler
 
 
-#Tiempo actual en el formato requerido para dicha práctica
+# Tiempo actual en el formato requerido para dicha práctica
 def time_now():
     gmt_actual = (time.strftime('%Y%m%d%H%M%S',
                   time.gmtime(time.time())))
     return gmt_actual
 
-#Funcion que se hará cargo de los mensajes log que se imprimirán en pantalla
-# y que se introduciran en nuestro fichero txt de log 
+# Funcion que se hará cargo de los mensajes log que se imprimirán en pantalla
+# y que se introduciran en nuestro fichero txt de log
+
 
 def log(log_file, option, ip, port, text):
     log_msg = ""
@@ -36,6 +37,7 @@ def log(log_file, option, ip, port, text):
     log_txt.write(time_now() + " " + log_msg)
     log_txt.close()
 
+
 class XML_Data_Handler(ContentHandler):
     """
     Manejador que nos permitirá extrae datos del UA del fichero XML,
@@ -43,11 +45,10 @@ class XML_Data_Handler(ContentHandler):
     """
 
     def __init__(self):
-        
         self.attr_dicc = {}
 
     def startElement(self, name, attrs):
-        
+
         if name == 'account':
             username = attrs.get('username', "")
             passwd = attrs.get('password', "")
@@ -90,9 +91,11 @@ class XML_Data_Handler(ContentHandler):
 
     def dicc_atributos(self):
         """
-        Nos devolverá el diccionario con todos los datos relevantes del fichero XML
+        Nos devolverá el diccionario con todos los datos
+        relevantes del fichero XML
         """
         return self.attr_dicc
+
 
 class EchoHandler(socketserver.DatagramRequestHandler):
     """
@@ -106,34 +109,35 @@ class EchoHandler(socketserver.DatagramRequestHandler):
             # Se harán diferentes acciones según llegue invite, ack o bye
             line = self.rfile.read()
             line = line.decode('utf-8')
-            log("ua2log.txt", "receive", "127.0.0.1", 
+            log("ua2log.txt", "receive", "127.0.0.1",
                 int("5005"), " ".join(line.split()))
             method = line[:line.find(" ")]
             if method == "INVITE":
                 print("El cliente nos manda " + line)
                 if "@" not in line or ":" not in line:
                     Error = "SIP/2.0 400 Bad Request"
-                    log("prlog.txt", "send", "127.0.0.1", 
+                    log("prlog.txt", "send", "127.0.0.1",
                         int("5005"), Error)
                     self.wfile.write(b'SIP/2.0 400 Bad Request')
                 else:
-                    msg = 'SIP/2.0 100 Trying' + 'SIP/2.0 180 Ringing' + 'SIP/2.0 200 OK'      
-                    log("prlog.txt", "send", "127.0.0.1", 
+                    msg = 'SIP/2.0 100 Trying SIP/2.0 \
+                           180 Ringing SIP/2.0 200 OK'
+                    log("prlog.txt", "send", "127.0.0.1",
                         int("5005"), msg)
                     self.wfile.write(b'SIP/2.0 100 Trying\r\n\r\n'
                                      b'SIP/2.0 180 Ringing\r\n\r\n'
                                      b'SIP/2.0 200 OK\r\n\r\n')
             elif method == "ACK":
                 aEjecutar = './mp32rtp -i 127.0.0.1 -p 5003 < ' + "cancion.mp3"
-                #os.system(aEjecutar)
+                os.system(aEjecutar)
             elif line[:line.find(" ")] == "BYE":
                 if "@" not in line or ":" not in line:
                     Error = "SIP/2.0 400 Bad Request"
-                    log("prlog.txt", "send", "127.0.0.1", 
+                    log("prlog.txt", "send", "127.0.0.1",
                         int("5005"), Error)
                     self.wfile.write(b'SIP/2.0 400 Bad Request\r\n\r\n')
                 else:
-                    log("prlog.txt", "send", "127.0.0.1", 
+                    log("prlog.txt", "send", "127.0.0.1",
                         int("5005"), 'SIP/2.0 200 OK')
                     self.wfile.write(b'SIP/2.0 200 OK\r\n')
             elif line and method != "INVITE" and method != "BYE"\
@@ -160,7 +164,7 @@ if __name__ == "__main__":
     parser.parse(open(config))
     diccionario_datos = Data_Handler.dicc_atributos()
 
-    # Pasamos los datos relevantes del XML a variables del programa 
+    # Pasamos los datos relevantes del XML a variables del programa
 
     UA_Name = diccionario_datos["UA_Name"]
     UA_Password = diccionario_datos["UA_Password"]

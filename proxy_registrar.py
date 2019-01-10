@@ -11,14 +11,15 @@ from xml.sax import make_parser
 from xml.sax.handler import ContentHandler
 
 
-#Tiempo actual en el formato requerido para dicha práctica
+# Tiempo actual en el formato requerido para dicha práctica
 def time_now():
     gmt_actual = (time.strftime('%Y%m%d%H%M%S',
                   time.gmtime(time.time())))
     return gmt_actual
 
-#Funcion que se hará cargo de los mensajes log que se imprimirán en pantalla
-# y que se introduciran en nuestro fichero txt de log 
+# Funcion que se hará cargo de los mensajes log que se imprimirán en pantalla
+# y que se introduciran en nuestro fichero txt de log
+
 
 def log(log_file, option, ip, port, text):
     log_msg = ""
@@ -33,6 +34,7 @@ def log(log_file, option, ip, port, text):
     log_txt = open(log_file, "a")
     log_txt.write(time_now() + " " + log_msg)
     log_txt.close()
+
 
 class SIPRegisterHandler(socketserver.DatagramRequestHandler):
 
@@ -78,7 +80,7 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
         line_decoded = ""
         for line in self.rfile:
             line_decoded += line.decode('utf-8')
-        log("prlog.txt", "receive", "127.0.0.1", 
+        log("prlog.txt", "receive", "127.0.0.1",
             int("5003"), " ".join(line_decoded.split()))
         if "REGISTER" in line_decoded and "Authorizathion:" in line_decoded:
             direccion_sip = line_decoded[line_decoded.find(" "):
@@ -86,9 +88,10 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
             self.diccionario_registro[direccion_sip] = \
                 [self.client_address[0]]
             Password = line_decoded[line_decoded.rfind(" "):]
-            username = direccion_sip[direccion_sip.find(":")+1:direccion_sip.rfind(":")]
+            index = direccion_sip.find(":")
+            username = direccion_sip[index+1:direccion_sip.rfind(":")]
             passwd_fich = open("passwords", "a")
-            passwd_fich.write("---Username: " + username \
+            passwd_fich.write("---Username: " + username
                               + " ---> Password: " + Password + "\n")
             passwd_fich.close()
             self.wfile.write(b'SIP/2.0 200 OK\r\n\r\n')
@@ -96,7 +99,8 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
             self.host, self.port = self.client_address[:2]
             index_expires = line_decoded.find("Expires:")
             expires_line = line_decoded[index_expires:]
-            expires = expires_line[expires_line.find(" ")+1:expires_line.find("A")]
+            index = expires_line.find(" ")+1
+            expires = expires_line[index:expires_line.find("A")]
             gmt_expires = time.strftime(" GMT %Y-%m-%d %H:%M:%S",
                                         time.gmtime(time.time()
                                                     + int(expires)))
@@ -105,30 +109,35 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
                 del self.diccionario_registro[direccion_sip]
             self.register2json()
         elif "REGISTER" in line_decoded:
-            self.wfile.write(b'SIP/2.0 401 Unauthorized\r\nWWW Authenticate: Digest nonce="987987987987987987"')
-            Error = 'SIP/2.0 401 Unauthorized\r\nWWW Authenticate: Digest nonce="987987987987987987"'
+            self.wfile.write(b'SIP/2.0 401 Unauthorized\r\n\WWW Authenticate:\
+                             Digest nonce="987987987987987987"')
+            Error = 'SIP/2.0 401 Unauthorized\r\nWWW Authenticate:\
+                     Digest nonce="987987987987987987"'
             log("prlog.txt", "send", "127.0.0.1", int("5003"), Error)
         elif "INVITE" in line_decoded:
-            username = line_decoded[line_decoded.find(":")+1:line_decoded.find("@")]
+            index = line_decoded.find(":")+1
+            username = line_decoded[index:line_decoded.find("@")]
             if username == "paquito" or username == "juanito":
-                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
-                    my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                with socket.socket(socket.AF_INET,
+                                   socket.SOCK_DGRAM) as my_socket:
+                    my_socket.setsockopt(socket.SOL_SOCKET,
+                                         socket.SO_REUSEADDR, 1)
                     my_socket.connect(("", int("6003")))
                     my_socket.send(bytes(line_decoded, 'utf-8'))
                     data = my_socket.recv(1024)
                     message = data.decode('utf-8')
-                    log("prlog.txt", "receive", "127.0.0.1", int("6003"), 
+                    log("prlog.txt", "receive", "127.0.0.1", int("6003"),
                         " ".join(message.split()))
                     lista = (message.split())
                     if lista == ['SIP/2.0', '100', 'Trying', 'SIP/2.0', '180',
                                  'Ringing', 'SIP/2.0', '200', 'OK']:
                         self.wfile.write(bytes(message, "utf-8"))
-                        log("prlog.txt", "send", "127.0.0.1", int("5003"), 
+                        log("prlog.txt", "send", "127.0.0.1", int("5003"),
                             " ".join(message.split()))
             else:
                 self.wfile.write(b'SIP/2.0 404 User Not Found\r\n')
                 Error = "SIP/2.0 404 User Not Found"
-                log("prlog.txt", "send", "127.0.0.1", int("5003"), Error)              
+                log("prlog.txt", "send", "127.0.0.1", int("5003"), Error)
         elif "ACK" in line_decoded:
             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
                 my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -143,6 +152,8 @@ class SIPRegisterHandler(socketserver.DatagramRequestHandler):
                 message = data.decode('utf-8')
                 self.wfile.write(bytes(message, "utf-8"))
                 log("prlog.txt", "send", "127.0.0.1", int("5003"), message)
+
+
 if __name__ == "__main__":
     try:
         config = sys.argv[1]
@@ -162,7 +173,7 @@ if __name__ == "__main__":
     parser.parse(open(config))
     diccionario_datos = Data_Handler.dicc_atributos()
 
-    # Pasamos los datos relevantes del XML a variables del programa 
+    # Pasamos los datos relevantes del XML a variables del programa
 
     Server_Name = diccionario_datos["Server_Name"]
     Server_Port = diccionario_datos["Server_Port"]
